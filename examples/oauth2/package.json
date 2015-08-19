@@ -1,6 +1,17 @@
 {
   "name": "passport-vso-oauth-examples-oauth2",
   "version": "0.0.0",
+  "description": "Example application using the passport-vso-oauth strategy.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/klousiaj/passport-vso-oauth.git"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
   "dependencies": {
     "body-parser": "^1.13.3",
     "cookie-parser": "^1.3.5",

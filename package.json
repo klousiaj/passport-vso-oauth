@@ -11,7 +11,8 @@
     "identity"
   ],
   "repository": {
-    "type": "git"
+    "type": "git",
+    "url": "git://github.com/klousiaj/passport-vso-oauth.git"
   },
   "licenses": [
     {
@@ -19,6 +20,13 @@
       "url": "http://www.opensource.org/licenses/MIT"
     }
   ],
+  "bugs": {
+    "url": "http://github.com/klousiaj/passport-vso-oauth/issues"
+  },
+  "author": {
+    "name": "J.P. Klousia",
+    "email": "klousiaj@gmail.com"
+  },
   "main": "./lib/passport-vso-oauth",
   "dependencies": {
     "passport-oauth": "^1.0.0",
