@@ -1,6 +1,6 @@
 {
   "name": "passport-vso-oauth",
-  "version": "0.0.0.1",
+  "version": "0.0.1",
   "description": "Visual Studio Online (OAuth) authentication strategies for Passport.",
   "keywords": [
     "passport",
