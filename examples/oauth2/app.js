@@ -8,14 +8,21 @@ var express = require('express')
   , session = require('express-session')
   , passport = require('passport')
   , util = require('util')
-  , config = require('./config.js')
   , VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
 
-// API Access link for creating client ID and secret:
-var VSO_CLIENT_ID = config.vso.clientId;
-var VSO_CLIENT_SECRET = config.vso.clientSecret;
-var VSO_CALLBACK_URL = config.vso.callbackUrl;
-var VSO_SCOPE_LIST = config.vso.scopeList;
+var config;
+try {
+  config = require('./config.js')
+} catch (ex) {
+  config = {
+    vso: {
+      clientId: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET,
+      callbackUrl: process.env.CALLBACK_URL,
+      scopeList: process.env.SCOPE_LIST
+    }
+  }
+}
 
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
@@ -38,10 +45,10 @@ passport.deserializeUser(function (obj, done) {
 //   credentials (in this case, an accessToken, refreshToken, and Vso
 //   profile), and invoke a callback with a user object.
 passport.use(new VsoStrategy({
-  clientID: VSO_CLIENT_ID,
-  clientSecret: VSO_CLIENT_SECRET,
-  callbackURL: VSO_CALLBACK_URL,
-  scope: VSO_SCOPE_LIST
+  clientID: config.vso.clientId,
+  clientSecret: config.vso.clientSecret,
+  callbackURL: config.vso.callbackUrl,
+  scope: config.vso.scopeList
 },
   function (accessToken, refreshToken, done) {
     // asynchronous verification, for effect...
@@ -98,7 +105,7 @@ app.get('/login', function (req, res) {
 //   redirecting the user to Vso.com.  After authorization, vso
 //   will redirect the user back to this application at /auth/vso/callback
 app.get('/auth/vso',
-  passport.authenticate('vso', { scope: VSO_SCOPE_LIST }),
+  passport.authenticate('vso', { scope: config.vso.scopeList }),
   function (req, res) {
     // The request will be redirected to Vso for authentication, so this
     // function will not be called.
