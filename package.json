@@ -1,0 +1,39 @@
+{
+  "name": "passport-vso-oauth",
+  "version": "0.0.0",
+  "description": "Visual Studio Online (OAuth) authentication strategies for Passport.",
+  "keywords": [
+    "passport",
+    "vso",
+    "auth",
+    "authn",
+    "authentication",
+    "identity"
+  ],
+  "repository": {
+    "type": "git"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
+  "main": "./lib/passport-vso-oauth",
+  "dependencies": {
+    "passport-oauth": "^1.0.0",
+    "pkginfo": "0.3.x",
+    "uid2": "0.0.3"
+  },
+  "devDependencies": {
+    "assert": "^1.3.0",
+    "util": "^0.10.3",
+    "vows": "^0.8.1"
+  },
+  "scripts": {
+    "test": "NODE_PATH=lib node_modules/.bin/vows test/*-test.js"
+  },
+  "engines": {
+    "node": ">= 0.4.0"
+  }
+}
