@@ -121,11 +121,13 @@ app.get('/auth/vso',
 // GET /auth/vso/callback
 //   Use passport.authenticate() as route middleware to authenticate the
 //   request.  If authentication fails, the user will be redirected back to the
-//   login page.  Otherwise, the primary route function function will be called,
+//   login page.  Otherwise, the primary route function will be called,
 //   which, in this example, will redirect the user to the home page.
 app.get('/auth/vso/callback',
   passport.authenticate('vso', { failureRedirect: '/login' }),
   function (req, res) {
+    console.log('request: ' + req);
+    console.log('response:' + res);
     res.redirect('/');
   });
 
