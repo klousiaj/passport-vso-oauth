@@ -9,8 +9,9 @@ var express = require('express')
   , passport = require('passport')
   , util = require('util')
   , Hashids = require('hashids')
-  , VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
-
+  , https = require('https') 
+  , fs = require('fs');
+  
 var config;
 try {
   config = require('./config.js')
@@ -23,6 +24,13 @@ try {
       scopeList: process.env.SCOPE_LIST
     }
   }
+}
+
+var VsoStrategy;
+try {
+  VsoStrategy = require('../../lib/passport-vso-oauth/index.js').OAuth2Strategy;
+} catch (ex) {
+  VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
 }
 
 // Passport session setup.
@@ -126,8 +134,6 @@ app.get('/auth/vso',
 app.get('/auth/vso/callback',
   passport.authenticate('vso', { failureRedirect: '/login' }),
   function (req, res) {
-    console.log('request: ' + req);
-    console.log('response:' + res);
     res.redirect('/');
   });
 
@@ -136,7 +142,17 @@ app.get('/logout', function (req, res) {
   res.redirect('/');
 });
 
+
+var httpsPort = 3443;
+// Setup HTTPS
+var cert = {
+  key: fs.readFileSync('examples/oauth2/certs/private.key'),
+  cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')  
+};
+var secureServer = https.createServer(cert, app).listen(httpsPort);
+
 app.listen(process.env.PORT || 5000);
+
 
 
 // Simple route middleware to ensure user is authenticated.
