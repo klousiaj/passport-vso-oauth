@@ -8,6 +8,7 @@ var express = require('express')
   , session = require('express-session')
   , passport = require('passport')
   , util = require('util')
+  , Hashids = require('hashids')
   , VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
 
 var config;
@@ -99,13 +100,19 @@ app.get('/login', function (req, res) {
   res.render('login', { user: req.user });
 });
 
+var hashid = new Hashids('something that is a good salt', 8);
+
 // GET /auth/vso
 //   Use passport.authenticate() as route middleware to authenticate the
 //   request.  The first step in Vso authentication will involve
 //   redirecting the user to Vso.com.  After authorization, vso
 //   will redirect the user back to this application at /auth/vso/callback
 app.get('/auth/vso',
-  passport.authenticate('vso', { scope: config.vso.scopeList }),
+  passport.authenticate('vso',
+    {
+      scope: config.vso.scopeList,
+      state: hashid.encode(Date.now())
+    }),
   function (req, res) {
     // The request will be redirected to Vso for authentication, so this
     // function will not be called.
