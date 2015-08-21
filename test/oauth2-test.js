@@ -16,7 +16,6 @@ vows.describe('VsoStrategy').addBatch({
     },
     
     'should be named vso': function (strategy) {
-      console.log(strategy);
       assert.equal(strategy.name, 'vso');
     },
   }

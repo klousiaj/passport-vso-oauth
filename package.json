@@ -29,9 +29,11 @@
   },
   "main": "./lib/passport-vso-oauth",
   "dependencies": {
+    "oauth": "^0.9.13",
     "passport-oauth": "^1.0.0",
     "pkginfo": "0.3.x",
     "uid2": "0.0.3",
+    "url": "^0.10.3",
     "utils": "^0.2.2"
   },
   "devDependencies": {

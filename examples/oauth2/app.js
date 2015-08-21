@@ -8,10 +8,9 @@ var express = require('express')
   , session = require('express-session')
   , passport = require('passport')
   , util = require('util')
-  , Hashids = require('hashids')
-  , https = require('https') 
+  , https = require('https')
   , fs = require('fs');
-  
+
 var config;
 try {
   config = require('./config.js')
@@ -28,38 +27,22 @@ try {
 
 var VsoStrategy;
 try {
-  VsoStrategy = require('../../lib/passport-vso-oauth/index.js').OAuth2Strategy;
+  // this is for local work with the entire tree
+  VsoStrategy = require('../../lib/passport-vso-oauth/index').OAuth2Strategy;
 } catch (ex) {
+  // this is for deployment to a remote server where I've only deployed a git subtree and the module
+  // isn't relative.
   VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
 }
 
-// Passport session setup.
-//   To support persistent login sessions, Passport needs to be able to
-//   serialize users into and deserialize users out of the session.  Typically,
-//   this will be as simple as storing the user ID when serializing, and finding
-//   the user by ID when deserializing.  However, since this example does not
-//   have a database of user records, the complete Vso profile is
-//   serialized and deserialized.
-passport.serializeUser(function (user, done) {
-  done(null, user);
-});
-
-passport.deserializeUser(function (obj, done) {
-  done(null, obj);
-});
-
-
 // Use the VsoStrategy within Passport.
-//   Strategies in Passport require a `verify` function, which accept
-//   credentials (in this case, an accessToken, refreshToken, and Vso
-//   profile), and invoke a callback with a user object.
 passport.use(new VsoStrategy({
   clientID: config.vso.clientId,
   clientSecret: config.vso.clientSecret,
   callbackURL: config.vso.callbackUrl,
   scope: config.vso.scopeList
 },
-  function (accessToken, refreshToken, done) {
+  function (accessToken, refreshToken, profile, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
       
@@ -67,7 +50,7 @@ passport.use(new VsoStrategy({
       // represent the logged-in user.  In a typical application, you would want
       // to associate the Vso account with a user record in your database,
       // and return that user instead.
-      return done(null, accessToken);
+      return done(null, profile);
     });
   })
   );
@@ -87,28 +70,37 @@ app.use(session({
   genid: function (req) {
     return uuid.v1() // use UUIDs for session IDs
   },
-  secret: 'keyboard cat'
+  secret: 'ovechtrick'
 }));
 // Initialize Passport!  Also use passport.session() middleware, to support
 // persistent login sessions (recommended).
 app.use(passport.initialize());
-app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
 
+// Passport session setup.
+//   To support persistent login sessions, Passport needs to be able to
+//   serialize users into and deserialize users out of the session.  Typically,
+//   this will be as simple as storing the user ID when serializing, and finding
+//   the user by ID when deserializing.  
+passport.serializeUser(function (user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function (obj, done) {
+  done(null, obj);
+});
 
 app.get('/', function (req, res) {
-  res.render('index', { user: req.user });
+  res.render('index', { user: req.user, access_token: req.access_token, refresh_token: req.refresh_token, expire_time: req.expire_time });
 });
 
 app.get('/account', ensureAuthenticated, function (req, res) {
-  res.render('account', { user: req.user });
+  res.render('account', { user: req.user, access_token: req.access_token, refresh_token: req.refresh_token, expire_time: req.expire_time });
 });
 
 app.get('/login', function (req, res) {
-  res.render('login', { user: req.user });
+  res.render('login', { user: req.user, access_token: req.access_token, refresh_token: req.refresh_token, expire_time: req.expire_time });
 });
-
-var hashid = new Hashids('something that is a good salt', 8);
 
 // GET /auth/vso
 //   Use passport.authenticate() as route middleware to authenticate the
@@ -119,7 +111,7 @@ app.get('/auth/vso',
   passport.authenticate('vso',
     {
       scope: config.vso.scopeList,
-      state: hashid.encode(Date.now())
+      sessionKey: 'connect.id'
     }),
   function (req, res) {
     // The request will be redirected to Vso for authentication, so this
@@ -142,18 +134,15 @@ app.get('/logout', function (req, res) {
   res.redirect('/');
 });
 
-
 var httpsPort = 3443;
 // Setup HTTPS
 var cert = {
   key: fs.readFileSync('examples/oauth2/certs/private.key'),
-  cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')  
+  cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')
 };
 var secureServer = https.createServer(cert, app).listen(httpsPort);
 
 app.listen(process.env.PORT || 5000);
-
-
 
 // Simple route middleware to ensure user is authenticated.
 //   Use this route middleware on any resource that needs to be protected.  If
@@ -161,6 +150,8 @@ app.listen(process.env.PORT || 5000);
 //   the request will proceed.  Otherwise, the user will be redirected to the
 //   login page.
 function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) { return next(); }
+  if (req.isAuthenticated()) {
+    return next();
+  }
   res.redirect('/login');
 }

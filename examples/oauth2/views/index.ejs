@@ -1,6 +1,9 @@
-<% layout('boilerplate') -%>
+<% layout('boilerplate') %>
 <% if (!user) { %>
 	<h2>Welcome! Please log in.</h2>
 <% } else { %>
-	<h2>Hello, <%= user %>.</h2>
+	<h2>Hello, <%= user.displayName %>.</h2>
+  <p><%= access_token %></p>
+  <p><%= refresh_token %></p>
+  <p><%= expire_time %></p>
 <% } %>
