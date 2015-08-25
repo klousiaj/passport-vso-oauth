@@ -26,6 +26,7 @@
     "morgan": "^1.6.1",
     "passport": ">= 0.0.0",
     "passport-vso-oauth": ">= 0.0.0",
+    "request": "^2.61.0",
     "utils": "^0.2.2",
     "uuid": "^2.0.1"
   },

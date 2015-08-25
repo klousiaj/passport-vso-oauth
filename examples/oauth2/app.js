@@ -9,6 +9,7 @@ var express = require('express')
   , passport = require('passport')
   , util = require('util')
   , https = require('https')
+  , request = require('request')
   , fs = require('fs');
 
 var config;
@@ -31,7 +32,7 @@ try {
   VsoStrategy = require('../../lib/passport-vso-oauth/index').OAuth2Strategy;
 } catch (ex) {
   // this is for deployment to a remote server where I've only deployed a git subtree and the module
-  // isn't relative.
+  // isn't on a relative path.
   VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
 }
 
@@ -40,12 +41,15 @@ passport.use(new VsoStrategy({
   clientID: config.vso.clientId,
   clientSecret: config.vso.clientSecret,
   callbackURL: config.vso.callbackUrl,
-  scope: config.vso.scopeList
+  scope: config.vso.scopeList,
+  passReqToCallback: true
 },
-  function (accessToken, refreshToken, profile, done) {
+  function (req, accessToken, refreshToken, params, profile, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
-      
+      req.session.accessToken = accessToken;
+      req.session.refreshToken = refreshToken;
+      req.session.expiresIn = params['expires_in'];
       // To keep the example simple, the user's Vso profile is returned to
       // represent the logged-in user.  In a typical application, you would want
       // to associate the Vso account with a user record in your database,
@@ -72,9 +76,11 @@ app.use(session({
   },
   secret: 'ovechtrick'
 }));
+
 // Initialize Passport!  Also use passport.session() middleware, to support
 // persistent login sessions (recommended).
 app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
 
 // Passport session setup.
@@ -83,7 +89,7 @@ app.use(express.static(__dirname + '/public'));
 //   this will be as simple as storing the user ID when serializing, and finding
 //   the user by ID when deserializing.  
 passport.serializeUser(function (user, done) {
-  done(null, user.id);
+  done(null, user);
 });
 
 passport.deserializeUser(function (obj, done) {
@@ -91,15 +97,21 @@ passport.deserializeUser(function (obj, done) {
 });
 
 app.get('/', function (req, res) {
-  res.render('index', { user: req.user, access_token: req.access_token, refresh_token: req.refresh_token, expire_time: req.expire_time });
+  res.render('index', { user: req.user });
 });
 
-app.get('/account', ensureAuthenticated, function (req, res) {
-  res.render('account', { user: req.user, access_token: req.access_token, refresh_token: req.refresh_token, expire_time: req.expire_time });
+app.get('/profile', ensureAuthenticated, function (req, res) {
+  res.render('profile', {
+    user: req.user,
+    access_token: req.session.accessToken,
+    refresh_token: req.session.refreshToken,
+    expires_in: req.session.expiresIn,
+    accounts: req.session.accounts
+  });
 });
 
 app.get('/login', function (req, res) {
-  res.render('login', { user: req.user, access_token: req.access_token, refresh_token: req.refresh_token, expire_time: req.expire_time });
+  res.render('login', { user: req.user });
 });
 
 // GET /auth/vso
@@ -134,15 +146,44 @@ app.get('/logout', function (req, res) {
   res.redirect('/');
 });
 
+// get the accounts from the VSO 
+app.get('/accounts', ensureAuthenticated, function (req, res) {
+  console.log('accessToken: ' + req.session.accessToken);
+  var options = {
+    uri: 'https://app.vssps.visualstudio.com/_apis/Accounts?',
+    qs: {
+      memberId: req.user.id,
+      'api-version': '1.0'
+    },
+    json: true,
+    headers: {
+      'Authorization': 'Bearer ' + req.session.accessToken
+    }
+  };
+
+  request(options, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      req.session.accounts = body.value;
+    } else {
+      console.log('unable to select account information: ' + error);
+    }
+    res.redirect('/profile');
+  });
+});
+
+
+// start the web server
+
 var httpsPort = 3443;
 // Setup HTTPS
 var cert = {
   key: fs.readFileSync('examples/oauth2/certs/private.key'),
   cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')
 };
+
 var secureServer = https.createServer(cert, app).listen(httpsPort);
 
-app.listen(process.env.PORT || 5000);
+//app.listen(process.env.PORT || 5000);
 
 // Simple route middleware to ensure user is authenticated.
 //   Use this route middleware on any resource that needs to be protected.  If
@@ -154,4 +195,4 @@ function ensureAuthenticated(req, res, next) {
     return next();
   }
   res.redirect('/login');
-}
+};

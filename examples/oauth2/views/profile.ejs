@@ -1,0 +1,27 @@
+<% layout('boilerplate') %>
+<div class="row panel-heading">
+  <ul class="list-unstyled">
+    <li><strong>ID:</strong> <%= user.id %></li>
+    <li><strong>Name:</strong> <%= user.displayName %></li>
+    <li><strong>Email:</strong> <%= user.email %></li>
+    <li><strong>Timestamp:</strong> <%= user.timestamp %></li>
+  </ul>
+</div>
+<div class="row panel-heading">
+  <ul class="list-unstyled">
+    <li><div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><strong>Access Token:</strong> <%= access_token %></div></li>
+    <li><div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><strong>Refresh Token:</strong> <%= refresh_token %></div></li>
+    <li><strong>Expires In (s):</strong> <%= expires_in %></li>
+  </ul>
+</div>
+<div class="row panel-heading">
+  <a href="/accounts">Select Account Data</a>
+  <% if (accounts) { %>
+  <h2>Registered Accounts</h2> 
+  <ul class="list-unstyled">
+    <% for (var ii = 0; ii < accounts.length; ii++) { %>
+      <li><strong>Account Name:</strong> <%= accounts[ii].accountName %></li>
+    <% } %>
+  </ul>
+  <% } %>
+</div>

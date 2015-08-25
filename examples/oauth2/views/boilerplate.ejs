@@ -1,21 +1,17 @@
+<!-- views/pages/index.ejs -->
 <!DOCTYPE html>
-<html>
-	<head>
-		<title>Passport-Facebook Example</title>
-	</head>
-	<body>
-		<% if (!user) { %>
-			<p>
-			<a href="/">Home</a> | 
-			<a href="/login">Log In</a>
-			</p>
-		<% } else { %>
-			<p>
-			<a href="/">Home</a> | 
-			<a href="/account">Account</a> | 
-			<a href="/logout">Log Out</a>
-			</p>
-		<% } %>
-		<%- body %>
-	</body>
+<html lang="en">
+<head>
+    <% include ./partials/head %>
+</head>
+<body class="container">
+    <header>
+        <% include ./partials/header %>
+    </header>
+    <main>
+        <div class="jumbotron">
+            <%- body %>
+        </div>
+    </main>
+</body>
 </html>
