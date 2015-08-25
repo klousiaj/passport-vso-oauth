@@ -21,7 +21,8 @@ try {
       clientId: process.env.CLIENT_ID,
       clientSecret: process.env.CLIENT_SECRET,
       callbackUrl: process.env.CALLBACK_URL,
-      scopeList: process.env.SCOPE_LIST
+      scopeList: process.env.SCOPE_LIST,
+      cookieSecret: process.env.COOKIE_SECRET
     }
   }
 }
@@ -47,13 +48,10 @@ passport.use(new VsoStrategy({
   function (req, accessToken, refreshToken, params, profile, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
-      req.session.accessToken = accessToken;
-      req.session.refreshToken = refreshToken;
-      req.session.expiresIn = params['expires_in'];
-      // To keep the example simple, the user's Vso profile is returned to
-      // represent the logged-in user.  In a typical application, you would want
-      // to associate the Vso account with a user record in your database,
-      // and return that user instead.
+      req.session.token = {};
+      req.session.token.accessToken = accessToken;
+      req.session.token.refreshToken = refreshToken;
+      req.session.token.expiresIn = params['expires_in'];
       return done(null, profile);
     });
   })
@@ -66,7 +64,7 @@ app.engine('ejs', ejsMate);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(morgan('dev'));
-app.use(cookieParser());
+app.use(cookieParser(config.vso.cookieSecret));
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 app.use(methodOverride());
@@ -103,10 +101,10 @@ app.get('/', function (req, res) {
 app.get('/profile', ensureAuthenticated, function (req, res) {
   res.render('profile', {
     user: req.user,
-    access_token: req.session.accessToken,
-    refresh_token: req.session.refreshToken,
-    expires_in: req.session.expiresIn,
-    accounts: req.session.accounts
+    access_token: req.session.token.accessToken,
+    refresh_token: req.session.token.refreshToken,
+    expires_in: req.session.token.expiresIn,
+    accounts: req.user.accounts
   });
 });
 
@@ -138,6 +136,13 @@ app.get('/auth/vso',
 app.get('/auth/vso/callback',
   passport.authenticate('vso', { failureRedirect: '/login' }),
   function (req, res) {
+    // write out a cookie that holds the refresh token.
+    res.cookie('do6.rt', req.session.token.refreshToken, {
+      secure: true,
+      httpOnly: true,
+      signed: true,
+      maxAge: 1209600000 // 14 days
+    });
     res.redirect('/');
   });
 
@@ -148,7 +153,6 @@ app.get('/logout', function (req, res) {
 
 // get the accounts from the VSO 
 app.get('/accounts', ensureAuthenticated, function (req, res) {
-  console.log('accessToken: ' + req.session.accessToken);
   var options = {
     uri: 'https://app.vssps.visualstudio.com/_apis/Accounts?',
     qs: {
@@ -157,20 +161,19 @@ app.get('/accounts', ensureAuthenticated, function (req, res) {
     },
     json: true,
     headers: {
-      'Authorization': 'Bearer ' + req.session.accessToken
+      'Authorization': 'Bearer ' + req.session.token.accessToken
     }
   };
 
   request(options, function (error, response, body) {
     if (!error && response.statusCode == 200) {
-      req.session.accounts = body.value;
+      req.user.accounts = body.value;
     } else {
       console.log('unable to select account information: ' + error);
     }
     res.redirect('/profile');
   });
 });
-
 
 // start the web server
 
@@ -183,14 +186,13 @@ var cert = {
 
 var secureServer = https.createServer(cert, app).listen(httpsPort);
 
-//app.listen(process.env.PORT || 5000);
-
 // Simple route middleware to ensure user is authenticated.
 //   Use this route middleware on any resource that needs to be protected.  If
 //   the request is authenticated (typically via a persistent login session),
 //   the request will proceed.  Otherwise, the user will be redirected to the
 //   login page.
 function ensureAuthenticated(req, res, next) {
+  
   if (req.isAuthenticated()) {
     return next();
   }
