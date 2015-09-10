@@ -14,12 +14,7 @@
     "type": "git",
     "url": "git://github.com/klousiaj/passport-vso-oauth.git"
   },
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://www.opensource.org/licenses/MIT"
-    }
-  ],
+  "license": "MIT",
   "bugs": {
     "url": "http://github.com/klousiaj/passport-vso-oauth/issues"
   },
@@ -29,7 +24,7 @@
   },
   "main": "./lib/passport-vso-oauth",
   "dependencies": {
-    "oauth": "^0.9.13",
+    "node-oauth2-vso": "^0.0.3",
     "passport-oauth": "^1.0.0",
     "pkginfo": "0.3.x",
     "uid2": "0.0.3",

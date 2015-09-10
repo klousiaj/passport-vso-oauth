@@ -3,8 +3,8 @@
   <ul class="list-unstyled">
     <li><strong>ID:</strong> <%= user.id %></li>
     <li><strong>Name:</strong> <%= user.displayName %></li>
-    <li><strong>Email:</strong> <%= user.email %></li>
-    <li><strong>Timestamp:</strong> <%= user.timestamp %></li>
+    <li><strong>Email:</strong> <%= user.emailAddress %></li>
+    <li><strong>Timestamp:</strong> <%= user.timeStamp %></li>
   </ul>
 </div>
 <div class="row panel-heading">
@@ -16,11 +16,11 @@
 </div>
 <div class="row panel-heading">
   <a href="/accounts">Select Account Data</a>
-  <% if (accounts) { %>
+  <% if (user.accounts) { %>
   <h2>Registered Accounts</h2> 
   <ul class="list-unstyled">
-    <% for (var ii = 0; ii < accounts.length; ii++) { %>
-      <li><strong>Account Name:</strong> <%= accounts[ii].accountName %></li>
+    <% for (var ii = 0; ii < user.accounts.length; ii++) { %>
+      <li><strong>Account Name:</strong> <%= user.accounts[ii].accountName %></li>
     <% } %>
   </ul>
   <% } %>

@@ -1,7 +1,7 @@
 var vows = require('vows');
 var assert = require('assert');
 var util = require('util');
-var VsoStrategy = require('passport-vso-oauth/oauth2');
+var VsoStrategy = require('node-oauth2-vso');
 
 
 vows.describe('VsoStrategy').addBatch({

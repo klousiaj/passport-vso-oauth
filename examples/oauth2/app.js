@@ -7,6 +7,7 @@ var express = require('express')
   , ejsMate = require('ejs-mate')
   , session = require('express-session')
   , passport = require('passport')
+  , refresh = require('passport-oauth2-refresh')
   , util = require('util')
   , https = require('https')
   , request = require('request')
@@ -37,8 +38,7 @@ try {
   VsoStrategy = require('passport-vso-oauth').OAuth2Strategy;
 }
 
-// Use the VsoStrategy within Passport.
-passport.use(new VsoStrategy({
+var strategy = new VsoStrategy({
   clientID: config.vso.clientId,
   clientSecret: config.vso.clientSecret,
   callbackURL: config.vso.callbackUrl,
@@ -48,15 +48,17 @@ passport.use(new VsoStrategy({
   function (req, accessToken, refreshToken, params, profile, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
-      req.session.token = {};
-      req.session.token.accessToken = accessToken;
-      req.session.token.refreshToken = refreshToken;
-      req.session.token.expiresIn = params['expires_in'];
+      req.token = {};
+      req.token.accessToken = accessToken;
+      req.token.refreshToken = refreshToken;
+      req.token.expiresIn = params['expires_in'];
       return done(null, profile);
     });
-  })
-  );
-
+  });
+  
+// Use the VsoStrategy within Passport and passport refresh.
+passport.use(strategy);
+refresh.use(strategy);
 var app = express();
 
 app.engine('ejs', ejsMate);
@@ -94,6 +96,10 @@ passport.deserializeUser(function (obj, done) {
   done(null, obj);
 });
 
+// before everything, we should be checking to see if there is already a token
+// and then use that token to populate the users identity. 
+app.all('/*', loadToken, fetchIdentity);
+
 app.get('/', function (req, res) {
   res.render('index', { user: req.user });
 });
@@ -101,9 +107,9 @@ app.get('/', function (req, res) {
 app.get('/profile', ensureAuthenticated, function (req, res) {
   res.render('profile', {
     user: req.user,
-    access_token: req.session.token.accessToken,
-    refresh_token: req.session.token.refreshToken,
-    expires_in: req.session.token.expiresIn,
+    access_token: req.token.accessToken,
+    refresh_token: req.token.refreshToken,
+    expires_in: req.token.expiresIn,
     accounts: req.user.accounts
   });
 });
@@ -137,7 +143,7 @@ app.get('/auth/vso/callback',
   passport.authenticate('vso', { failureRedirect: '/login' }),
   function (req, res) {
     // write out a cookie that holds the refresh token.
-    res.cookie('do6.rt', req.session.token.refreshToken, {
+    res.cookie('do6.id', req.token, {
       secure: true,
       httpOnly: true,
       signed: true,
@@ -153,6 +159,7 @@ app.get('/logout', function (req, res) {
 
 // get the accounts from the VSO 
 app.get('/accounts', ensureAuthenticated, function (req, res) {
+  // access the Accounts URL from VSO. Requires an access token in the session.
   var options = {
     uri: 'https://app.vssps.visualstudio.com/_apis/Accounts?',
     qs: {
@@ -161,7 +168,7 @@ app.get('/accounts', ensureAuthenticated, function (req, res) {
     },
     json: true,
     headers: {
-      'Authorization': 'Bearer ' + req.session.token.accessToken
+      'Authorization': 'Bearer ' + req.token.accessToken
     }
   };
 
@@ -169,9 +176,25 @@ app.get('/accounts', ensureAuthenticated, function (req, res) {
     if (!error && response.statusCode == 200) {
       req.user.accounts = body.value;
     } else {
-      console.log('unable to select account information: ' + error);
+      // refresh the access_token and try again.
+      
+      // write the new token to a cookie
+      res.cookie('do6.id', req.token, {
+        secure: true,
+        httpOnly: true,
+        signed: true,
+        maxAge: 1209600000 // 14 days
+      });
+
+      res.redirect('/accounts');
     }
-    res.redirect('/profile');
+    res.render('profile', {
+      user: req.user,
+      access_token: req.token.accessToken,
+      refresh_token: req.token.refreshToken,
+      expires_in: req.token.expiresIn,
+      accounts: req.user.accounts
+    });
   });
 });
 
@@ -192,9 +215,51 @@ var secureServer = https.createServer(cert, app).listen(httpsPort);
 //   the request will proceed.  Otherwise, the user will be redirected to the
 //   login page.
 function ensureAuthenticated(req, res, next) {
-  
-  if (req.isAuthenticated()) {
+  if (req.token) {
     return next();
   }
   res.redirect('/login');
 };
+
+// load specific tokens if they are available.
+function loadToken(req, res, next) {
+  if (!req.token) {
+    req.token = req.signedCookies['do6.id'];
+  }
+  return next();
+}
+
+// if the req.user isn't populated, but there is a refresh token
+// get the profile from the service.
+function fetchIdentity(req, res, next) {
+  if (typeof req.token === 'undefined') {
+    return next();
+  }
+  // access the Accounts URL from VSO. Requires an access token in the session.
+  var options = {
+    uri: 'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?',
+    qs: {
+      'api-version': '1.0'
+    },
+    json: true,
+    headers: {
+      'Authorization': 'Bearer ' + req.token.accessToken
+    }
+  };
+
+  request(options, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      req.user = body;
+      return next();
+    } else {
+      // refresh the access_token and try again.
+      refresh.requestNewAccessToken('vso', req.token.refreshToken, function (err, accessToken, refreshToken) {
+        req.token.accessToken = accessToken;
+        if (err) {
+          throw new Error('Unable to refresh the access token: ' + err.data);
+        }
+        fetchIdentity(req, res, next);
+      });
+    }
+  });
+}
