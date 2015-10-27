@@ -212,8 +212,8 @@ app.get('/accounts', ensureAuthenticated, function (req, res) {
 var httpsPort = 3443;
 // Setup HTTPS
 var cert = {
-  key: fs.readFileSync('examples/oauth2/certs/private.key'),
-  cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')
+  key: fs.readFileSync('certs/private.key'),
+  cert: fs.readFileSync('certs/certificate.pem')
 };
 
 var secureServer = https.createServer(cert, app).listen(httpsPort);
