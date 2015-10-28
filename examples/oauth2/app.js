@@ -1,16 +1,15 @@
-var express = require('express')
-  , morgan = require('morgan')
-  , bodyParser = require('body-parser')
-  , cookieParser = require('cookie-parser')
-  , methodOverride = require('method-override')
-  , uuid = require('uuid')
-  , ejsMate = require('ejs-mate')
-  , session = require('express-session')
-  , passport = require('passport')
-  , util = require('util')
-  , https = require('https')
-  , request = require('request')
-  , fs = require('fs');
+var express = require('express');
+var morgan = require('morgan');
+var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
+var methodOverride = require('method-override');
+var uuid = require('uuid');
+var ejsMate = require('ejs-mate');
+var session = require('express-session');
+var passport = require('passport');
+var util = require('util');
+var request = require('request');
+var fs = require('fs');
 
 var config;
 try {
@@ -22,7 +21,9 @@ try {
       clientSecret: process.env.CLIENT_SECRET,
       callbackUrl: process.env.CALLBACK_URL,
       scopeList: process.env.SCOPE_LIST,
-      cookieSecret: process.env.COOKIE_SECRET
+      cookieSecret: process.env.COOKIE_SECRET,
+      // if it isn't configured in the config.js then don't use it.
+      useHttps: false
     }
   }
 }
@@ -209,14 +210,23 @@ app.get('/accounts', ensureAuthenticated, function (req, res) {
 
 // start the web server
 
-var httpsPort = 3443;
-// Setup HTTPS
-var cert = {
-  key: fs.readFileSync('certs/private.key'),
-  cert: fs.readFileSync('certs/certificate.pem')
-};
-
-var secureServer = https.createServer(cert, app).listen(httpsPort);
+console.log('useHttps: ' + config.vso.useHttps);
+var port = 3443;
+// start the server using https
+if (config.vso.useHttps){
+  var https = require('https');
+  // Setup HTTPS
+  var cert = {
+    key: fs.readFileSync('examples/oauth2/certs/private.key'),
+    cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')
+  };
+  var secureServer = https.createServer(cert, app).listen(port);
+} else {
+  var http = require('http');
+  // the server should be started using HTTP and the https is taken care
+  // of by the provider (heroku)
+  var secureServer = http.createServer(app).listen(port);
+}
 
 // Simple route middleware to ensure user is authenticated.
 //   Use this route middleware on any resource that needs to be protected.  If
