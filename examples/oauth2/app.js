@@ -225,7 +225,7 @@ if (config.vso.useHttps){
   var http = require('http');
   // the server should be started using HTTP and the https is taken care
   // of by the provider (heroku)
-  var secureServer = http.createServer(app).listen(port);
+  var secureServer = http.createServer(app).listen(process.env.PORT || port);
 }
 
 // Simple route middleware to ensure user is authenticated.
