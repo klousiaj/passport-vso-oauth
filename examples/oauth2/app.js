@@ -220,7 +220,7 @@ if (config.vso.useHttps){
     key: fs.readFileSync('examples/oauth2/certs/private.key'),
     cert: fs.readFileSync('examples/oauth2/certs/certificate.pem')
   };
-  var secureServer = https.createServer(cert, app).listen(port);
+  var secureServer = https.createServer(cert, app).listen(process.env.PORT || port);
 } else {
   var http = require('http');
   // the server should be started using HTTP and the https is taken care
